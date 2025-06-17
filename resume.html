@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Michael Max Brown | A New Perspective for Arlula</title>
+    <script src="https://unpkg.com/three@0.128.0/build/three.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+
+        :root {
+            --primary-color: #00f2ea;
+            --primary-hover: #00b3ad;
+            --bg-color: #0d1117;
+            --surface-color: #161b22;
+            --text-color: #c9d1d9;
+            --heading-color: #ffffff;
+            --border-color: #30363d;
+            --shadow-color: rgba(0, 242, 234, 0.1);
+        }
+        
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+        }
+        
+        .page-header {
+            padding: 40px 20px;
+            text-align: center;
+            background-color: var(--bg-color);
+            position: relative;
+            z-index: 10;
+            margin-bottom: 40px;
+        }
+        .page-header h1 {
+            font-size: 3rem; 
+            text-shadow: 0 0 15px rgba(0, 242, 234, 0.5);
+            margin: 0;
+        }
+        .page-header .tagline {
+            font-size: 1.4rem; 
+            color: var(--primary-color); 
+            font-weight: 600; 
+            margin-top: 10px;
+        }
+
+        .content-wrapper {
+            width: 100%;
+            background-color: var(--bg-color);
+        }
+
+        .container { max-width: 900px; margin: 0 auto; padding: 0 20px; position: relative; z-index: 2; }
+
+        .hero-container {
+            position: relative; 
+            width: 100%;
+            height: 70vh; 
+        }
+        #globe-canvas {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; cursor: grab;
+        }
+        #globe-canvas:active { cursor: grabbing; }
+
+        .bottom-ui-container {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 10;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        #constellation-selector {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 12px;
+            background: rgba(13, 17, 23, 0.7);
+            padding: 12px 15px;
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+        }
+
+        .selector-helper-text {
+            font-size: 0.8rem;
+            color: var(--text-color);
+            opacity: 0.7;
+            font-style: italic;
+        }
+        
+        .selector-buttons-wrapper {
+            display: flex;
+            gap: 10px;
+        }
+
+        .selector-btn {
+            background: transparent; border: 1px solid transparent; color: var(--text-color); font-weight: 600;
+            cursor: pointer; padding: 8px 12px; transition: all 0.3s; border-radius: 8px;
+            display: flex; align-items: center; gap: 8px;
+        }
+        .selector-btn:hover { color: var(--primary-color); background-color: rgba(255,255,255,0.1); }
+        .selector-btn.active { color: var(--bg-color); background-color: var(--primary-color); border-color: var(--primary-color); }
+        .selector-dot { width: 8px; height: 8px; border-radius: 50%; transition: background-color 0.3s; }
+
+        #details-panel {
+            position: absolute; top: 20px; left: 20px; width: 280px; background: rgba(13, 17, 23, 0.8); border: 1px solid var(--border-color); border-radius: 8px; padding: 20px; z-index: 10; transform: translateX(-120%); transition: transform 0.5s ease-in-out;
+        }
+        #details-panel.visible { transform: translateX(0); }
+        #details-panel h3 { margin: 0 0 10px 0; color: var(--primary-color); }
+        #details-panel p { margin: 0 0 15px 0; font-size: 0.9rem; line-height: 1.5; }
+        #reset-view-btn {
+            background: var(--primary-color); color: var(--bg-color); border: none; padding: 8px 15px; border-radius: 5px; cursor: pointer; font-weight: 600; width: 100%;
+        }
+
+        .scroll-down-arrow {
+            color: var(--primary-color);
+            cursor: pointer;
+            transition: color 0.3s, transform 0.3s;
+            animation: bob-animation 2.5s infinite ease-in-out;
+            line-height: 0;
+        }
+        .scroll-down-arrow:hover {
+            color: white; animation-play-state: paused; transform: scale(1.1);
+        }
+        @keyframes bob-animation {
+            0% { transform: translateY(0); } 50% { transform: translateY(8px); } 100% { transform: translateY(0); }
+        }
+
+        .section { padding: 80px 0; }
+        .reveal { opacity: 0; transform: translateY(30px); transition: opacity 0.8s ease, transform 0.8s ease; }
+        .reveal.visible { opacity: 1; transform: translateY(0); }
+        h2 { font-size: 2.2rem; color: var(--heading-color); text-align: center; margin-bottom: 50px; }
+        .card { background: var(--surface-color); border-radius: 12px; border: 1px solid var(--border-color); padding: 40px; box-shadow: 0 0 20px var(--shadow-color); }
+        .fit-buttons { display: flex; justify-content: center; gap: 15px; margin-bottom: 30px; flex-wrap: wrap; }
+        /* --- MODIFICATION START: Button Styling --- */
+        .fit-btn { 
+            background: transparent; border: 1px solid var(--border-color); border-radius: 8px; padding: 12px 20px; cursor: pointer; 
+            font-weight: 600; color: var(--text-color); transition: all 0.3s ease; 
+            display: flex; align-items: center; gap: 10px; /* Added flex properties */
+        }
+        .fit-btn .btn-icon {
+            width: 20px;
+            height: 20px;
+            stroke-width: 2;
+        }
+        /* --- MODIFICATION END --- */
+        .fit-btn.active, .fit-btn:hover { background: var(--primary-color); border-color: var(--primary-color); color: var(--bg-color); transform: translateY(-2px); box-shadow: 0 0 15px var(--primary-color); }
+        .fit-content { min-height: 120px; background-color: var(--bg-color); border-radius: 8px; padding: 25px; }
+        .fit-content ul { padding-left: 20px; margin: 0; }
+        .fit-content li { margin-bottom: 10px; }
+        .projects-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 30px; }
+        .flip-card { background-color: transparent; height: 280px; perspective: 1000px; cursor: pointer; }
+        .flip-card-inner { position: relative; width: 100%; height: 100%; transition: transform 0.6s; transform-style: preserve-3d; }
+        .flip-card.is-flipped .flip-card-inner { transform: rotateY(180deg); }
+        .flip-card-front, .flip-card-back { position: absolute; width: 100%; height: 100%; -webkit-backface-visibility: hidden; backface-visibility: hidden; border-radius: 12px; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 20px; box-sizing: border-box; }
+        .flip-card-front { background: var(--surface-color); color: var(--heading-color); border: 1px solid var(--border-color); }
+        .flip-card-back { background: linear-gradient(135deg, var(--primary-hover), var(--primary-color)); color: var(--bg-color); transform: rotateY(180deg); }
+        .flip-card h3 { margin: 10px 0 5px; font-size: 1.4rem; font-weight: 700; text-align: center;}
+        .flip-card-front h3 { margin-top: 0; } 
+        .flip-card p { text-align: center; }
+        .flip-instruction { font-size: 0.9rem; color: var(--primary-color); font-weight: 600; margin-top: 15px; opacity: 0.8; }
+        .flip-card-back ul { list-style: none; padding: 0; text-align: left; font-weight: 600; }
+        .flip-card-back li { margin-bottom: 10px; }
+        .flip-card-back li::before { content: '✓'; margin-right: 10px; font-weight: bold; }
+        .footer { text-align: center; padding: 60px 20px; }
+        .contact-grid { display: flex; justify-content: center; align-items: center; gap: 30px; margin-bottom: 30px; flex-wrap: wrap; }
+        .contact-item { display: flex; align-items: center; gap: 10px; color: var(--text-color); text-decoration: none; transition: color 0.3s; }
+        .contact-item:hover { color: var(--primary-color); }
+        .contact-item svg { width: 24px; height: 24px; fill: currentColor; }
+        
+        /* --- MODIFICATION START: Icon Styling --- */
+        .card-icon {
+            width: 40px;
+            height: 40px;
+            color: var(--primary-color);
+            margin-bottom: 15px;
+            stroke-width: 1.5;
+        }
+        /* --- MODIFICATION END --- */
+    </style>
+</head>
+<body>
+    <header class="page-header">
+        <h1>Michael Max Brown</h1>
+        <p class="tagline">Connecting Geospatial Data to Real-World Solutions</p>
+    </header>
+
+    <div class="hero-container">
+        <div id="globe-canvas"></div>
+        <div id="details-panel">
+            <h3 id="details-title"></h3>
+            <p id="details-desc"></p>
+            <button id="reset-view-btn">Show All Constellations</button>
+        </div>
+
+        <div class="bottom-ui-container">
+            <div id="constellation-selector">
+                <span class="selector-helper-text">(Click to explore a constellation)</span>
+                <div class="selector-buttons-wrapper">
+                    <!-- Buttons are added here by JavaScript -->
+                </div>
+            </div>
+            
+            <a href="#main-content" class="scroll-down-arrow" aria-label="Scroll down">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="48" height="48">
+                    <path fill="currentColor" d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6 1.41-1.41z"/>
+                </svg>
+            </a>
+        </div>
+    </div>
+
+    <div class="content-wrapper">
+        <main class="container">
+            <section id="main-content" class="section reveal">
+                <div class="card">
+                    <h2>How I Fit Arlulu</h2>
+                    <!-- --- MODIFICATION START: Buttons with Icons --- -->
+                    <div class="fit-buttons">
+                        <button class="fit-btn active" data-content="customer">
+                             <svg class="btn-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path stroke-linecap="round" stroke-linejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                            </svg>
+                            <span>Customer Success</span>
+                        </button>
+                        <button class="fit-btn" data-content="technical">
+                            <svg class="btn-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path stroke-linecap="round" stroke-linejoin="round" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
+                            </svg>
+                            <span>Technical Builder</span>
+                        </button>
+                        <button class="fit-btn" data-content="problem-solver">
+                            <svg class="btn-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.456zM16.898 20.572L16.5 21.75l-.398-1.178a3.375 3.375 0 00-2.455-2.456L12.75 18l1.178-.398a3.375 3.375 0 002.455-2.456L16.5 14.25l.398 1.178a3.375 3.375 0 002.456 2.456l1.178.398-1.178.398a3.375 3.375 0 00-2.456 2.456z" />
+                            </svg>
+                            <span>Problem Solver</span>
+                        </button>
+                    </div>
+                    <!-- --- MODIFICATION END --- -->
+                    <div id="fit-content-display" class="fit-content"></div>
+                </div>
+            </section>
+            
+            <section class="section reveal">
+                <h2>Proof in Action: Experience</h2>
+                <div class="projects-grid">
+                    <div class="flip-card">
+                        <div class="flip-card-inner">
+                            <div class="flip-card-front">
+                                <svg class="card-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path stroke-linecap="round" stroke-linejoin="round" d="M6.75 7.5l3 2.25-3 2.25m4.5 0h3m-9 8.25h13.5A2.25 2.25 0 0021 18V6a2.25 2.25 0 00-2.25-2.25H5.25A2.25 2.25 0 003 6v12a2.25 2.25 0 002.25 2.25z" />
+                                </svg>
+                                <h3>OrchardMate Startup</h3>
+                                <p>An Agri-Tech software initiative.</p>
+                                <span class="flip-instruction">(Click to Flip)</span>
+                            </div>
+                            <div class="flip-card-back"><ul><li>Identified user needs via direct engagement</li><li>Designed a non-trivial software application</li><li>Built user-facing data management tools</li></ul></div>
+                        </div>
+                    </div>
+                    <div class="flip-card">
+                        <div class="flip-card-inner">
+                            <div class="flip-card-front">
+                                <svg class="card-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path stroke-linecap="round" stroke-linejoin="round" d="M12 21a9.004 9.004 0 008.716-6.747M12 21a9.004 9.004 0 01-8.716-6.747M12 21c2.485 0 4.5-4.03 4.5-9S14.485 3 12 3m0 18c-2.485 0-4.5-4.03-4.5-9S9.515 3 12 3m0 0a8.997 8.997 0 017.843 4.582M12 3a8.997 8.997 0 00-7.843 4.582m15.686 0A11.953 11.953 0 0112 10.5c-2.998 0-5.74-1.1-7.843-2.918m15.686 0A8.959 8.959 0 0121 12c0 .778-.099 1.533-.284 2.253m0 0A17.919 17.919 0 0112 16.5c-3.162 0-6.133-.815-8.716-2.247m0 0A9.015 9.015 0 013 12c0-1.605.42-3.113 1.157-4.418" />
+                                </svg>
+                                <h3>ALLFED Research</h3>
+                                <p>Planetary-scale problem solving.</p>
+                                <span class="flip-instruction">(Click to Flip)</span>
+                            </div>
+                            <div class="flip-card-back"><ul><li>Assessed alternative food sources</li><li>Analyzed large-scale disaster scenarios</li><li>Contributed to global food security strategy</li></ul></div>
+                        </div>
+                    </div>
+                    <div class="flip-card">
+                        <div class="flip-card-inner">
+                            <div class="flip-card-front">
+                                <!-- --- SIMPLE TEXT TEST --- -->
+                                <h1 class="card-icon">★</h1>
+                                
+                                <h3>Startup Tech Experience</h3>
+                                <p>From R&D to Commercial Scale.</p>
+                                <span class="flip-instruction">(Click to Flip)</span>
+                            </div>
+                            <div class="flip-card-back">...</div>
+                        </div>
+                    </div>
+            </section>
+        </main>
+
+        <footer class="footer">
+            <h2>Ready to Build The Future with Arlula</h2>
+            <div class="contact-grid">
+                <a href="mailto:michaelbrown4343@gmail.com" class="contact-item"><svg viewBox="0 0 24 24"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2zm0 4l8 5 8-5V6l-8 5-8-5v2z"/></svg><span>michaelbrown4343@gmail.com</span></a>
+                <a href="https://linkedin.com/in/michaelmaxbrown/" target="_blank" class="contact-item"><svg viewBox="0 0 24 24"><path d="M19 3a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h14zm-7 5.07h-2.14v7h2.14v-7zm-1.07-2.31c-.72 0-1.29-.58-1.29-1.3s.57-1.3 1.29-1.3c.72 0 1.29.58 1.29 1.3s-.57 1.3-1.29 1.3zm7.07 2.31h-2.07v3.41c0-.85-.43-1.42-1.14-1.42-.62 0-1.13.52-1.13 1.42v3.59h2.14v-4.26c0-.39.18-.78.57-.78.39 0 .57.39.57.78v4.26h2.13v-4.59c0-2.33-1.29-3.41-3.13-3.41z"/></svg><span>linkedin.com/in/michaelmaxbrown</span></a>
+                <div class="contact-item"><svg viewBox="0 0 24 24"><path d="M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z"/></svg><span>+61 439 630 578</span></div>
+            </div>
+        </footer>
+    </div>
+
+    <script>
+    if ('scrollRestoration' in history) {
+        history.scrollRestoration = 'manual';
+    }
+    
+    document.addEventListener('DOMContentLoaded', function() {
+        window.scrollTo(0, 0);
+
+        if (typeof THREE === 'undefined') {
+            console.error("Three.js library not loaded.");
+            return;
+        }
+
+        const ThreeJSGlobe = {
+            container: document.getElementById('globe-canvas'),
+            selectorEl: document.getElementById('constellation-selector'),
+            detailsPanel: document.getElementById('details-panel'),
+            
+            scene: new THREE.Scene(),
+            camera: new THREE.PerspectiveCamera(45, document.getElementById('globe-canvas').clientWidth / document.getElementById('globe-canvas').clientHeight, 0.1, 1000),
+            renderer: new THREE.WebGLRenderer({ antialias: true, alpha: true }),
+            
+            earthGroup: new THREE.Group(),
+            constellations: [],
+            starfield: null,
+            
+            mouse: { x: 0, y: 0, isDown: false, lastX: 0, lastY: 0 },
+            isAnimating: false,
+            targetRotation: { x: 0, y: 0 },
+            currentRotation: { x: 0, y: 0 },
+            
+            selectedConstellation: null,
+            cameraTarget: new THREE.Vector3(0,0,30),
+            lookAtTarget: new THREE.Vector3(0,0,0),
+
+            constellationData: [
+                { name: 'GPS',      altitude: 4.2, count: 24, inclination: 0.96, color: '#4d94ff', speed: 0.0020, desc: "Global Positioning System. A MEO constellation at ~20,200 km altitude for precise navigation." },
+                { name: 'Galileo',  altitude: 4.8, count: 30, inclination: 0.98, color: '#32cd32', speed: 0.0018, desc: "Europe's global navigation satellite system. A MEO constellation at ~23,222 km altitude." },
+                { name: 'Starlink', altitude: 1.3, count: 60, inclination: 0.9, color: '#ffffff',  speed: 0.0080, desc: "Satellite internet by SpaceX. A large LEO constellation at ~550 km altitude." },
+                { name: 'Iridium',  altitude: 1.4, count: 66, inclination: 1.5, color: '#ffd700',  speed: 0.0060, desc: "Global voice and data. A LEO constellation at ~780 km in a polar orbit." },
+                { name: 'Sentinel', altitude: 1.35, count: 8, inclination: 1.7, color: '#ff6b6b',  speed: 0.0065, desc: "Earth observation for Copernicus. A LEO constellation at ~700-800 km altitude." },
+            ],
+
+            init() {
+                this.renderer.setSize(this.container.clientWidth, this.container.clientHeight); this.renderer.setPixelRatio(window.devicePixelRatio); this.container.appendChild(this.renderer.domElement); this.scene.add(new THREE.AmbientLight(0xcccccc, 0.2)); const dirLight = new THREE.DirectionalLight(0xffffff, 0.8); dirLight.position.set(5, 5, 5); this.scene.add(dirLight); const loader = new THREE.TextureLoader(); loader.setCrossOrigin('anonymous'); const earthGeo = new THREE.SphereGeometry(2, 64, 64); const earthMat = new THREE.MeshPhongMaterial({ map: loader.load('https://threejs.org/examples/textures/land_ocean_ice_cloud_2048.jpg'), bumpMap: loader.load('https://threejs.org/examples/textures/earth_bump_1024x512.jpg'), bumpScale: 0.02, specularMap: loader.load('https://threejs.org/examples/textures/water_1024x1024.jpg'), specular: new THREE.Color('grey') }); const earthMesh = new THREE.Mesh(earthGeo, earthMat); this.earthGroup.add(earthMesh); const cloudMat = new THREE.MeshStandardMaterial({ map: loader.load('https://threejs.org/examples/textures/cloud.png'), transparent: true, opacity: 0.5 }); const cloudMesh = new THREE.Mesh(new THREE.SphereGeometry(2.03, 64, 64), cloudMat); this.earthGroup.add(cloudMesh); this.scene.add(this.earthGroup); this.createStarfield(); this.createConstellations(); this.createUI(); this.addEventListeners(); this.animate();
+            },
+            createStarfield() {
+                const starVertices = []; for (let i = 0; i < 10000; i++) { const x = (Math.random() - 0.5) * 2000; const y = (Math.random() - 0.5) * 2000; const z = (Math.random() - 0.5) * 2000; if (x*x + y*y + z*z < 1000*1000) starVertices.push(x, y, z); } const starGeo = new THREE.BufferGeometry(); starGeo.setAttribute('position', new THREE.Float32BufferAttribute(starVertices, 3)); const starMat = new THREE.PointsMaterial({ color: 0xffffff, size: 0.7 }); this.starfield = new THREE.Points(starGeo, starMat); this.scene.add(this.starfield);
+            },
+            createConstellations() {
+                this.constellationData.forEach(data => { const group = new THREE.Group(); group.name = data.name; group.userData = data; const radius = 2 * data.altitude; const orbitGeo = new THREE.BufferGeometry().setFromPoints( new THREE.Path().absarc(0, 0, radius, 0, Math.PI * 2, false).getSpacedPoints(128) ); const orbitMat = new THREE.LineDashedMaterial({ color: data.color, dashSize: 0.2, gapSize: 0.1, transparent: true, opacity: 0.7 }); const orbit = new THREE.Line(orbitGeo, orbitMat); orbit.computeLineDistances(); group.add(orbit); const satGeo = new THREE.SphereGeometry(0.04, 8, 8); const satMat = new THREE.MeshBasicMaterial({ color: data.color }); group.satellites = []; for(let i=0; i<data.count; i++) { const satellite = new THREE.Mesh(satGeo, satMat); satellite.userData.randomOffset = Math.random() * Math.PI * 2; group.satellites.push(satellite); group.add(satellite); } group.rotation.x = data.inclination; this.constellations.push(group); this.scene.add(group); });
+            },
+            createUI() {
+                const buttonWrapper = this.selectorEl.querySelector('.selector-buttons-wrapper');
+                this.constellationData.forEach(data => {
+                    const btn = document.createElement('button');
+                    btn.className = 'selector-btn';
+                    btn.dataset.name = data.name;
+                    btn.innerHTML = `<span class="selector-dot" style="background-color:${data.color}"></span>${data.name}`;
+                    buttonWrapper.appendChild(btn);
+                });
+            },
+            selectConstellation(name) {
+                if (this.selectedConstellation && this.selectedConstellation.name === name) return; this.selectedConstellation = this.constellations.find(c => c.name === name); const orbitRadius = 2 * this.selectedConstellation.userData.altitude; this.cameraTarget.set(0, 0, orbitRadius * 2.2); this.lookAtTarget.set(0, 0, 0); this.isAnimating = true; document.querySelectorAll('.selector-btn').forEach(b => b.classList.toggle('active', b.dataset.name === name)); document.getElementById('details-title').textContent = this.selectedConstellation.userData.name; document.getElementById('details-desc').textContent = this.selectedConstellation.userData.desc; this.detailsPanel.classList.add('visible'); this.constellations.forEach(c => c.visible = (c === this.selectedConstellation));
+            },
+            resetView() {
+                this.selectedConstellation = null; this.isAnimating = true; this.cameraTarget.set(0,0,30); this.detailsPanel.classList.remove('visible'); document.querySelectorAll('.selector-btn').forEach(b => b.classList.remove('active')); this.constellations.forEach(c => { c.visible = true; });
+            },
+            animate() {
+                requestAnimationFrame(() => this.animate()); const now = Date.now(); this.earthGroup.rotation.y += 0.0005; this.constellations.forEach(group => { group.rotation.z += group.userData.speed; const radius = 2 * group.userData.altitude; group.satellites.forEach((sat, i) => { const angle = (i / group.userData.count) * Math.PI * 2 + sat.userData.randomOffset; sat.position.set(Math.cos(angle) * radius, Math.sin(angle) * radius, 0); const pulse = Math.sin(now * 0.005 + sat.userData.randomOffset) * 0.2 + 1.0; sat.scale.set(pulse, pulse, pulse); }); }); this.currentRotation.x += (this.targetRotation.x - this.currentRotation.x) * 0.1; this.currentRotation.y += (this.targetRotation.y - this.currentRotation.y) * 0.1; this.earthGroup.parent.rotation.set(this.currentRotation.x, this.currentRotation.y, 0); this.camera.position.lerp(this.cameraTarget, 0.05); this.renderer.render(this.scene, this.camera);
+            },
+            addEventListeners() {
+                window.addEventListener('resize', () => { this.camera.aspect = this.container.clientWidth / this.container.clientHeight; this.camera.updateProjectionMatrix(); this.renderer.setSize(this.container.clientWidth, this.container.clientHeight); }); this.container.addEventListener('mousedown', (e) => { this.mouse.isDown = true; this.mouse.lastX = e.clientX; this.mouse.lastY = e.clientY; }); this.container.addEventListener('mouseup', () => { this.mouse.isDown = false; }); this.container.addEventListener('mousemove', (e) => { if (this.mouse.isDown) { const deltaX = e.clientX - this.mouse.lastX; const deltaY = e.clientY - this.mouse.lastY; this.targetRotation.y += deltaX * 0.005; this.targetRotation.x += deltaY * 0.005; this.mouse.lastX = e.clientX; this.mouse.lastY = e.clientY; } }); this.container.addEventListener('wheel', (e) => { e.preventDefault(); if (!this.selectedConstellation) { this.cameraTarget.z += e.deltaY * 0.01; this.cameraTarget.z = Math.max(8, Math.min(50, this.cameraTarget.z)); } }); this.selectorEl.addEventListener('click', (e) => { const btn = e.target.closest('.selector-btn'); if (btn) this.selectConstellation(btn.dataset.name); }); document.getElementById('reset-view-btn').addEventListener('click', () => this.resetView());
+            }
+        };
+        
+        ThreeJSGlobe.init();
+        
+        const fitButtons = document.querySelectorAll('.fit-btn');
+        const fitContentDisplay = document.getElementById('fit-content-display');
+        const content = {
+            customer: `<ul><li><strong>Customer Engagement:</strong> Proven ability to engage with users (OrchardMate), understand their requirements, and design solutions.</li><li><strong>Education & Support:</strong> Skilled at breaking down complex topics for any audience (Science Communicator).</li></ul>`,
+            technical: `<ul><li><strong>Software Development:</strong> Wrote non-trivial software and processing pipelines for my startup initiative.</li><li><strong>Systems Thinking:</strong> Chemical engineering provides a strong foundation in designing scalable, repeatable processes.</li></ul>`,
+            'problem-solver': `<ul><li><strong>Self-Directed:</strong> Founded and developed OrchardMate from concept to MVP, demonstrating initiative and action-orientation.</li><li><strong>Multidisciplinary:</strong> Thrives on challenges that bridge the gap between technical possibilities and customer needs.</li></ul>`
+        };
+        function updateFitContent(key) { fitContentDisplay.innerHTML = content[key]; }
+        fitButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                document.querySelector('.fit-btn.active').classList.remove('active');
+                button.classList.add('active');
+                updateFitContent(button.dataset.content);
+            });
+        });
+        updateFitContent('customer');
+
+        document.querySelectorAll('.flip-card').forEach(card => card.addEventListener('click', () => card.classList.toggle('is-flipped')));
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => { if (entry.isIntersecting) entry.target.classList.add('visible'); });
+        }, { threshold: 0.1 });
+        document.querySelectorAll(".reveal").forEach(el => observer.observe(el));
+    });
+    </script>
+</body>
+</html>
